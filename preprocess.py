@@ -1,27 +1,40 @@
 """Preprocess stock data."""
 from pandas import DataFrame, read_csv
-from ta import average_true_range, bollinger_mavg, cci, macd, ema, roc, rsi, wr
+from ta.trend import CCIIndicator, ema_indicator, macd
+from ta.momentum import roc, rsi, wr
+from ta.volatility import average_true_range, bollinger_mavg
 
 
-def preprocess(csv: str) -> DataFrame:
-    """Preprocess stock market data to prepare it to be used as training and testing data for the model."""
-    df = read_csv(csv, sep=", ", engine="python")
+def preprocess(csv_path: str) -> DataFrame:
+    """
+    Preprocess stock market data to prepare it to be used as training and testing
+    data for the model.
+    """
+    df = read_csv(csv_path, sep=", ", engine="python")
     df.rename(
-        columns={"Date": "date", "Open": "open", "High": "high", "Low": "low", "Close/Last": "Close"}, inplace=True
+        columns={
+            "Date": "timestamp",
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close/Last": "close",
+        },
+        inplace=True,
     )
 
     # Remove dollar signs from entries
-    df["Open"] = df["Open"].str.replace("$", "").astype(float)
-    df["High"] = df["High"].str.replace("$", "").astype(float)
-    df["Low"] = df["Low"].str.replace("$", "").astype(float)
-    df["Close"] = df["Close"].str.replace("$", "").astype(float)
+    df["open"] = df["open"].str.replace("$", "").astype(float)
+    df["high"] = df["high"].str.replace("$", "").astype(float)
+    df["low"] = df["low"].str.replace("$", "").astype(float)
+    df["close"] = df["close"].str.replace("$", "").astype(float)
 
-    df = compute_indicators(df)
+    compute_indicators(df)
 
-    # TODO add S&P 500 and CBOE Volitity indices as a column
+    # Add indices for representing movement of the overall market
+    add_spx(df)
+    add_vix(df)
 
-    # df = normalize(df)
-
+    print(df)
     return df
 
 
@@ -29,22 +42,39 @@ def compute_indicators(df: DataFrame) -> DataFrame:
     """Compute useful stock market indicators for the dataframe."""
     df["rsi14"] = rsi(df["close"])
     df["macd"] = macd(df["close"])
-    df["cci"] = cci(df["high"], df["low"], df["close"])
+    df["cci"] = CCIIndicator(df["high"], df["low"], df["close"]).cci()
     df["atr"] = average_true_range(df["high"], df["low"], df["close"])
-    df["bool"] = bollinger_mavg(df["close"])
+    df["boll"] = bollinger_mavg(df["close"])
     df["roc"] = roc(df["close"])
     df["wpr"] = wr(df["high"], df["low"], df["close"])
-    df["ema50"] = ema(df["close"], 50)
-    df["ema100"] = ema(df["close"], 100)
-    df["ema200"] = ema(df["close"], 200)
-
-    return df
+    df["ema50"] = ema_indicator(df["close"], 50)
+    df["ema100"] = ema_indicator(df["close"], 100)
+    df["ema200"] = ema_indicator(df["close"], 200)
 
 
 def normalize(df: DataFrame) -> DataFrame:
     """Normalize dataframe to be used inside the neural network."""
     # TODO normalize dataframe
     pass
+
+
+def add_spx(df: DataFrame) -> DataFrame:
+    """Add S&P 500 index to dataframe."""
+    spx_data = read_csv("./data/SPX.csv", sep=", ", engine="python")
+    df["spx_open"] = spx_data["Open"].astype(float)
+    df["spx_high"] = spx_data["High"].astype(float)
+    df["spx_low"] = spx_data["Low"].astype(float)
+    df["spx_close"] = spx_data["Close/Last"].astype(float)
+
+
+def add_vix(df: DataFrame) -> DataFrame:
+    """Add CBOE Volatility Index to dataframe."""
+    # TODO fix NAs
+    vix_data = read_csv("./data/VIX.csv")[1553:]
+    df["vix_open"] = vix_data["Open"].astype(float)
+    df["vix_high"] = vix_data["High"].astype(float)
+    df["vix_low"] = vix_data["Low"].astype(float)
+    df["vix_close"] = vix_data["Close"].astype(float)
 
 
 if __name__ == "__main__":
