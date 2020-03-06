@@ -1,6 +1,6 @@
 """Preprocess stock data."""
 import numpy as np
-from pandas import DataFrame, read_csv, to_datetime
+from pandas import DataFrame, read_csv, Series, to_datetime
 from sklearn.preprocessing import MinMaxScaler
 from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.momentum import roc, rsi, wr
@@ -8,7 +8,7 @@ from ta.volatility import average_true_range, bollinger_mavg
 from typing import Tuple
 
 
-def preprocess(csv_path: str) -> Tuple[DataFrame, MinMaxScaler]:
+def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler]:
     """
     Preprocess stock market data to prepare it to be used as training and testing
     data for the model.
@@ -47,7 +47,10 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, MinMaxScaler]:
     df["timestamp"] = to_datetime(df["timestamp"])
     df.set_index("timestamp", inplace=True)
 
-    return df, scaler
+    # Get labels for each row in the dataframe
+    labels = get_labels(df)
+
+    return df, labels, scaler
 
 
 def compute_indicators(df: DataFrame) -> DataFrame:
@@ -115,6 +118,17 @@ def add_vix(df: DataFrame) -> None:
     df["vix_high"] = vix_data["High"].astype(np.float64)
     df["vix_low"] = vix_data["Low"].astype(np.float64)
     df["vix_close"] = vix_data["Close"].astype(np.float64)
+
+
+def get_labels(df: DataFrame) -> Series:
+    """Get labels for a dataframe (closing values from the next day)."""
+    closing_values = df["close"].values
+    closing_values = np.delete(closing_values, 0)
+
+    # Remove last row from original dataframe since we do not have a label for it
+    df.drop(df.tail(1).index, inplace=True)
+
+    return closing_values
 
 
 if __name__ == "__main__":
