@@ -1,11 +1,13 @@
 """Preprocess stock data."""
 from pandas import DataFrame, read_csv
+from sklearn.preprocessing import MinMaxScaler
 from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.momentum import roc, rsi, wr
 from ta.volatility import average_true_range, bollinger_mavg
+from typing import Tuple
 
 
-def preprocess(csv_path: str) -> DataFrame:
+def preprocess(csv_path: str) -> Tuple[DataFrame, MinMaxScaler]:
     """
     Preprocess stock market data to prepare it to be used as training and testing
     data for the model.
@@ -34,8 +36,10 @@ def preprocess(csv_path: str) -> DataFrame:
     add_spx(df)
     add_vix(df)
 
+    scaler = normalize(df)
+
     print(df)
-    return df
+    return df, scaler
 
 
 def compute_indicators(df: DataFrame) -> DataFrame:
@@ -52,13 +56,15 @@ def compute_indicators(df: DataFrame) -> DataFrame:
     df["ema200"] = ema_indicator(df["close"], 200)
 
 
-def normalize(df: DataFrame) -> DataFrame:
+def normalize(df: DataFrame) -> MinMaxScaler:
     """Normalize dataframe to be used inside the neural network."""
-    # TODO normalize dataframe
-    pass
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    values_scaled = scaler.fit_transform(df.values)
+    df = DataFrame(values_scaled)
+    return scaler
 
 
-def add_spx(df: DataFrame) -> DataFrame:
+def add_spx(df: DataFrame) -> None:
     """Add S&P 500 index to dataframe."""
     spx_data = read_csv("./data/SPX.csv", sep=", ", engine="python")
     df["spx_open"] = spx_data["Open"].astype(float)
@@ -67,7 +73,7 @@ def add_spx(df: DataFrame) -> DataFrame:
     df["spx_close"] = spx_data["Close/Last"].astype(float)
 
 
-def add_vix(df: DataFrame) -> DataFrame:
+def add_vix(df: DataFrame) -> None:
     """Add CBOE Volatility Index to dataframe."""
     # TODO fix NAs
     vix_data = read_csv("./data/VIX.csv")[1553:]
