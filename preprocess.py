@@ -1,4 +1,5 @@
 """Preprocess stock data."""
+import numpy as np
 from pandas import DataFrame, read_csv
 from sklearn.preprocessing import MinMaxScaler
 from ta.trend import CCIIndicator, ema_indicator, macd
@@ -20,25 +21,22 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, MinMaxScaler]:
             "High": "high",
             "Low": "low",
             "Close/Last": "close",
+            "Volume": "volume",
         },
         inplace=True,
     )
 
     # Remove dollar signs from entries
-    df["open"] = df["open"].str.replace("$", "").astype(float)
-    df["high"] = df["high"].str.replace("$", "").astype(float)
-    df["low"] = df["low"].str.replace("$", "").astype(float)
-    df["close"] = df["close"].str.replace("$", "").astype(float)
+    df["open"] = df["open"].str.replace("$", "").astype(np.float64)
+    df["high"] = df["high"].str.replace("$", "").astype(np.float64)
+    df["low"] = df["low"].str.replace("$", "").astype(np.float64)
+    df["close"] = df["close"].str.replace("$", "").astype(np.float64)
 
     compute_indicators(df)
-
-    # Add indices for representing movement of the overall market
     add_spx(df)
     add_vix(df)
-
     scaler = normalize(df)
 
-    print(df)
     return df, scaler
 
 
@@ -58,29 +56,55 @@ def compute_indicators(df: DataFrame) -> DataFrame:
 
 def normalize(df: DataFrame) -> MinMaxScaler:
     """Normalize dataframe to be used inside the neural network."""
+    columns = [
+        "close",
+        "volume",
+        "open",
+        "high",
+        "low",
+        "rsi14",
+        "macd",
+        "cci",
+        "atr",
+        "boll",
+        "roc",
+        "wpr",
+        "ema50",
+        "ema100",
+        "ema200",
+        "spx_open",
+        "spx_high",
+        "spx_low",
+        "spx_close",
+        "vix_open",
+        "vix_high",
+        "vix_low",
+        "vix_close",
+    ]
+    values = df[columns].values
     scaler = MinMaxScaler(feature_range=(0, 1))
-    values_scaled = scaler.fit_transform(df.values)
-    df = DataFrame(values_scaled)
+    values = scaler.fit_transform(values)
+    df[columns] = values
+
     return scaler
 
 
 def add_spx(df: DataFrame) -> None:
     """Add S&P 500 index to dataframe."""
     spx_data = read_csv("./data/SPX.csv", sep=", ", engine="python")
-    df["spx_open"] = spx_data["Open"].astype(float)
-    df["spx_high"] = spx_data["High"].astype(float)
-    df["spx_low"] = spx_data["Low"].astype(float)
-    df["spx_close"] = spx_data["Close/Last"].astype(float)
+    df["spx_open"] = spx_data["Open"].astype(np.float64)
+    df["spx_high"] = spx_data["High"].astype(np.float64)
+    df["spx_low"] = spx_data["Low"].astype(np.float64)
+    df["spx_close"] = spx_data["Close/Last"].astype(np.float64)
 
 
 def add_vix(df: DataFrame) -> None:
     """Add CBOE Volatility Index to dataframe."""
-    # TODO fix NAs
-    vix_data = read_csv("./data/VIX.csv")[1553:]
-    df["vix_open"] = vix_data["Open"].astype(float)
-    df["vix_high"] = vix_data["High"].astype(float)
-    df["vix_low"] = vix_data["Low"].astype(float)
-    df["vix_close"] = vix_data["Close"].astype(float)
+    vix_data = read_csv("./data/VIX.csv")[1553:].reset_index()
+    df["vix_open"] = vix_data["Open"].astype(np.float64)
+    df["vix_high"] = vix_data["High"].astype(np.float64)
+    df["vix_low"] = vix_data["Low"].astype(np.float64)
+    df["vix_close"] = vix_data["Close"].astype(np.float64)
 
 
 if __name__ == "__main__":

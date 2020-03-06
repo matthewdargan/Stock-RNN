@@ -1,6 +1,7 @@
 """LSTM model used for stock prediction."""
-from tensorflow.keras.layers import Dense, LSTM, Sequential
 from preprocess import preprocess
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.layers import Dense, LSTM, Sequential
 
 EPOCHS = 50
 
@@ -13,13 +14,13 @@ model = Sequential(
         Dense(2, activation="sigmoid"),
     ]
 )
-
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy")
-model.fit(stock_data, epochs=EPOCHS, validation_data=stock_valid_data)
 
 if __name__ == "__main__":
-    # Preprocess data
-    data, scaler = preprocess("./data/MCD.csv")
+    stock_data, scaler = preprocess("./data/MCD.csv")
+    train, test = train_test_split(stock_data, test_size=0.3)
+
+    model.fit(train, epochs=EPOCHS, validation_data=test)
 
     # Denormalize data back to original scale
-    scaler.inverse_transform(data)
+    scaler.inverse_transform(stock_data)
