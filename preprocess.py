@@ -1,6 +1,6 @@
 """Preprocess stock data."""
 import numpy as np
-from pandas import DataFrame, read_csv
+from pandas import DataFrame, read_csv, to_datetime
 from sklearn.preprocessing import MinMaxScaler
 from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.momentum import roc, rsi, wr
@@ -33,9 +33,19 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, MinMaxScaler]:
     df["close"] = df["close"].str.replace("$", "").astype(np.float64)
 
     compute_indicators(df)
+
+    # Add indices to include information of the larger market movement
     add_spx(df)
     add_vix(df)
+
+    df.dropna(inplace=True)
+
+    # Normalize datapoints between 0 and 1
     scaler = normalize(df)
+
+    # Convert timestamp column to timestamp datatype and set it the as index
+    df["timestamp"] = to_datetime(df["timestamp"])
+    df.set_index("timestamp", inplace=True)
 
     return df, scaler
 
