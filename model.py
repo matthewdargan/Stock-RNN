@@ -31,8 +31,6 @@ if __name__ == "__main__":
         (stock_test.values, label_test)
     ).batch(32)
 
-    print(train_dataset.shape)
-
     model.fit(
         train_dataset, epochs=EPOCHS, validation_data=test_dataset,
     )
