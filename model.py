@@ -1,7 +1,6 @@
 """LSTM model used for stock prediction."""
 import matplotlib.pyplot as plt
 from pandas import DataFrame
-from sklearn.model_selection import train_test_split
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM
 
@@ -20,14 +19,11 @@ def plot_predictions(history, predictions):
 BATCH_SIZE = 64
 EPOCHS = 50
 
-stock_data, next_day_close_labels, stock_scaler, label_scaler = preprocess(
-    "./data/MCD.csv"
-)
+stock_data, stock_labels, stock_scaler, label_scaler = preprocess("./data/MCD.csv")
 stock_time_series = stock_data.copy()
+
+# Add dimension for timestep size
 stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.shape[1])
-stock_train, stock_test, label_train, label_test = train_test_split(
-    stock_data, next_day_close_labels, test_size=0.3, shuffle=True
-)
 
 model = Sequential(
     [
@@ -46,10 +42,12 @@ model.compile(loss="mse", optimizer="adam", metrics=["mae", "mse"])
 
 if __name__ == "__main__":
     model.fit(
-        stock_train,
-        label_train,
+        stock_data,
+        stock_labels,
+        batch_size=BATCH_SIZE,
         epochs=EPOCHS,
-        validation_data=(stock_test, label_test),
+        validation_split=0.3,
+        shuffle=True,
     )
 
     stock_pred = label_scaler.inverse_transform(model.predict(stock_data))

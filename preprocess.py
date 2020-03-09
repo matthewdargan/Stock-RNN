@@ -9,7 +9,9 @@ from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.volatility import average_true_range, bollinger_mavg
 
 
-def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler, MinMaxScaler]:
+def preprocess(
+    csv_path: str,
+) -> Tuple[DataFrame, np.ndarray, MinMaxScaler, MinMaxScaler]:
     """
     Preprocess stock market data to prepare it to be used as training and testing
     data for the model.
@@ -39,7 +41,7 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler, MinMaxSc
     add_spx(df)
     add_vix(df)
 
-    # Convert timestamp column to timestamp datatype and set it the as index
+    # Convert timestamp column to timestamp datatype and set it as index
     df["timestamp"] = to_datetime(df["timestamp"])
     df.set_index("timestamp", inplace=True)
 
@@ -97,7 +99,7 @@ def normalize_dataframe(df: DataFrame) -> Tuple[DataFrame, MinMaxScaler]:
     return df, scaler
 
 
-def get_labels(df: DataFrame) -> Series:
+def get_labels(df: DataFrame) -> np.ndarray:
     """Get labels for a dataframe (closing values from the next day)."""
     closing_values = df["close"].values
     closing_values = np.delete(closing_values, 0)
@@ -108,7 +110,7 @@ def get_labels(df: DataFrame) -> Series:
     return closing_values
 
 
-def normalize_labels(labels: Series) -> Tuple[Series, MinMaxScaler]:
+def normalize_labels(labels: np.ndarray) -> Tuple[np.ndarray, MinMaxScaler]:
     """Normalize label values."""
     scaler = MinMaxScaler(feature_range=(0, 1))
     labels = scaler.fit_transform(labels.reshape(-1, 1))
