@@ -26,7 +26,7 @@ stock_data, next_day_close_labels, stock_scaler, label_scaler = preprocess(
 stock_time_series = stock_data.copy()
 stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.shape[1])
 stock_train, stock_test, label_train, label_test = train_test_split(
-    stock_data, next_day_close_labels, test_size=0.3, shuffle=False
+    stock_data, next_day_close_labels, test_size=0.3, shuffle=True
 )
 
 model = Sequential(
