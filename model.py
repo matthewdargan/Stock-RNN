@@ -1,10 +1,21 @@
 """LSTM model used for stock prediction."""
+import matplotlib.pyplot as plt
 from pandas import DataFrame
-from preprocess import preprocess
 from sklearn.model_selection import train_test_split
-import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM
+
+from preprocess import preprocess
+
+
+def plot_predictions(history, predictions):
+    """Plot stock history and predictions to compare results."""
+    plt.figure(figsize=(12, 6))
+    plt.plot(history.iloc[:, 0], label="History")
+    plt.plot(predictions, label="Prediction")
+    plt.legend(loc="upper left")
+    plt.show()
+
 
 BATCH_SIZE = 64
 EPOCHS = 50
@@ -12,22 +23,11 @@ EPOCHS = 50
 stock_data, next_day_close_labels, stock_scaler, label_scaler = preprocess(
     "./data/MCD.csv"
 )
-hahahaha = stock_data.copy()
+stock_time_series = stock_data.copy()
 stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.shape[1])
 stock_train, stock_test, label_train, label_test = train_test_split(
     stock_data, next_day_close_labels, test_size=0.3, shuffle=False
 )
-
-# train_dataset = (
-#     tf.data.Dataset.from_tensor_slices((stock_train, label_train))
-#     # .shuffle(len(stock_train))
-#     .batch(BATCH_SIZE).repeat()
-# )
-# test_dataset = (
-#     tf.data.Dataset.from_tensor_slices((stock_test, label_test))
-#     # .shuffle(len(stock_test))
-#     .batch(BATCH_SIZE).repeat()
-# )
 
 model = Sequential(
     [
@@ -42,23 +42,17 @@ model = Sequential(
         Dense(1),
     ]
 )
-model.compile(optimizer="adam", loss="mse", metrics=["accuracy"])
+model.compile(loss="mse", optimizer="adam", metrics=["mae", "mse"])
 
 if __name__ == "__main__":
     model.fit(
         stock_train,
         label_train,
         epochs=EPOCHS,
-        # steps_per_epoch=len(stock_train),
         validation_data=(stock_test, label_test),
-        # validation_steps=len(stock_test),
     )
 
-    # TODO look into which columns are which, might be why mae is so high
-    pred = model.predict(stock_test)
-    pred = label_scaler.inverse_transform(pred)
-    hahahaha = DataFrame(stock_scaler.inverse_transform(hahahaha))
-    print(f"test: {hahahaha}, pred: {pred}")
+    stock_pred = label_scaler.inverse_transform(model.predict(stock_data))
+    stock_time_series = DataFrame(stock_scaler.inverse_transform(stock_time_series))
 
-    # Denormalize data back to original scale
-    # scaler.inverse_transform(stock_data)
+    plot_predictions(stock_time_series, stock_pred)

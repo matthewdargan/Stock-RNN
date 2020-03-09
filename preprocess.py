@@ -1,11 +1,12 @@
 """Preprocess stock data."""
+from typing import Tuple
+
 import numpy as np
 from pandas import DataFrame, read_csv, Series, to_datetime
 from sklearn.preprocessing import MinMaxScaler
-from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.momentum import roc, rsi, wr
+from ta.trend import CCIIndicator, ema_indicator, macd
 from ta.volatility import average_true_range, bollinger_mavg
-from typing import Tuple
 
 
 def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler, MinMaxScaler]:
@@ -32,9 +33,9 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler, MinMaxSc
     df["low"] = df["low"].str.replace("$", "").astype(np.float64)
     df["close"] = df["close"].str.replace("$", "").astype(np.float64)
 
-    # compute_indicators(df)
+    compute_indicators(df)
 
-    # Add indices to include information of the larger market movement
+    # Add indices to include information of larger market movement
     add_spx(df)
     add_vix(df)
 
@@ -47,14 +48,14 @@ def preprocess(csv_path: str) -> Tuple[DataFrame, Series, MinMaxScaler, MinMaxSc
     # Get labels for each row in the dataframe
     labels = get_labels(df)
 
-    # Normalize datapoints between 0 and 1
+    # Normalize data points between 0 and 1
     df, df_scaler = normalize_dataframe(df)
     labels, label_scaler = normalize_labels(labels)
 
     return df, labels, df_scaler, label_scaler
 
 
-def compute_indicators(df: DataFrame) -> DataFrame:
+def compute_indicators(df: DataFrame) -> None:
     """Compute useful stock market indicators for the dataframe."""
     df["rsi14"] = rsi(df["close"])
     df["macd"] = macd(df["close"])
@@ -63,9 +64,9 @@ def compute_indicators(df: DataFrame) -> DataFrame:
     df["boll"] = bollinger_mavg(df["close"])
     df["roc"] = roc(df["close"])
     df["wpr"] = wr(df["high"], df["low"], df["close"])
-    # df["ema50"] = ema_indicator(df["close"], 50)
-    # df["ema100"] = ema_indicator(df["close"], 100)
-    # df["ema200"] = ema_indicator(df["close"], 200)
+    df["ema50"] = ema_indicator(df["close"], 50)
+    df["ema100"] = ema_indicator(df["close"], 100)
+    df["ema200"] = ema_indicator(df["close"], 200)
 
 
 def add_spx(df: DataFrame) -> None:
