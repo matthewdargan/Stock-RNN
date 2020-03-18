@@ -2,11 +2,9 @@
 from typing import Tuple
 
 import numpy as np
-from pandas import DataFrame, read_csv, Series, to_datetime
+import talib
+from pandas import DataFrame, read_csv, to_datetime
 from sklearn.preprocessing import MinMaxScaler
-from ta.momentum import roc, rsi, wr
-from ta.trend import CCIIndicator, ema_indicator, macd
-from ta.volatility import average_true_range, bollinger_mavg
 
 
 def preprocess(
@@ -16,34 +14,35 @@ def preprocess(
     Preprocess stock market data to prepare it to be used as training and testing
     data for the model.
     """
-    df = read_csv(csv_path, sep=", ", engine="python")
+    df = read_csv(csv_path)
     df.rename(
         columns={
             "Date": "timestamp",
             "Open": "open",
             "High": "high",
             "Low": "low",
-            "Close/Last": "close",
+            "Close": "close",
+            "Adj Close": "adj close",
             "Volume": "volume",
         },
         inplace=True,
     )
+    df["open"] = df["open"].astype(np.float64)
+    df["high"] = df["high"].astype(np.float64)
+    df["low"] = df["low"].astype(np.float64)
+    df["close"] = df["close"].astype(np.float64)
+    df["adj close"] = df["adj close"].astype(np.float64)
+    df["volume"] = df["volume"].astype(np.uint64)
 
-    # Remove dollar signs from entries
-    df["open"] = df["open"].str.replace("$", "").astype(np.float64)
-    df["high"] = df["high"].str.replace("$", "").astype(np.float64)
-    df["low"] = df["low"].str.replace("$", "").astype(np.float64)
-    df["close"] = df["close"].str.replace("$", "").astype(np.float64)
+    # Convert timestamp column to timestamp datatype and set it as index
+    df["timestamp"] = to_datetime(df["timestamp"])
+    df.set_index("timestamp", inplace=True)
 
     compute_indicators(df)
 
     # Add indices to include information of larger market movement
     add_spx(df)
     add_vix(df)
-
-    # Convert timestamp column to timestamp datatype and set it as index
-    df["timestamp"] = to_datetime(df["timestamp"])
-    df.set_index("timestamp", inplace=True)
 
     df.dropna(inplace=True)
 
@@ -59,30 +58,47 @@ def preprocess(
 
 def compute_indicators(df: DataFrame) -> None:
     """Compute useful stock market indicators for the dataframe."""
-    df["rsi14"] = rsi(df["close"])
-    df["macd"] = macd(df["close"])
-    df["cci"] = CCIIndicator(df["high"], df["low"], df["close"]).cci()
-    df["atr"] = average_true_range(df["high"], df["low"], df["close"])
-    df["boll"] = bollinger_mavg(df["close"])
-    df["roc"] = roc(df["close"])
-    df["wpr"] = wr(df["high"], df["low"], df["close"])
-    df["ema50"] = ema_indicator(df["close"], 50)
-    df["ema100"] = ema_indicator(df["close"], 100)
-    df["ema200"] = ema_indicator(df["close"], 200)
+    df["ma5"] = talib.SMA(df["close"], timeperiod=5)
+    df["ma10"] = talib.SMA(df["close"], timeperiod=10)
+    df["ma50"] = talib.SMA(df["close"], timeperiod=50)
+    df["ma200"] = talib.SMA(df["close"], timeperiod=200)
+    df["rsi"] = talib.RSI(df["close"])
+    df["macd"], df["macdsignal"], df["macdhist"] = talib.MACD(df["close"])
+    df["cci"] = talib.CCI(df["high"], df["low"], df["close"])
+    df["atr"] = talib.ATR(df["high"], df["low"], df["close"])
+    df["bbands_high"], df["bbands_middle"], df["bbands_low"] = talib.BBANDS(df["close"])
+    df["roc"] = talib.ROC(df["close"])
+    df["w%r"] = talib.WILLR(df["high"], df["low"], df["close"])
+    df["ema50"] = talib.EMA(df["close"], timeperiod=50)
+    df["ema100"] = talib.EMA(df["close"], timeperiod=100)
+    df["ema200"] = talib.EMA(df["close"], timeperiod=200)
 
 
 def add_spx(df: DataFrame) -> None:
     """Add S&P 500 index to dataframe."""
-    spx_data = read_csv("./data/SPX.csv", sep=", ", engine="python")
+    spx_data = read_csv("data/^GSPC.csv")
+    spx_data.rename(
+        columns={"Date": "timestamp"}, inplace=True,
+    )
+    spx_data["timestamp"] = to_datetime(spx_data["timestamp"])
+    spx_data.set_index("timestamp", inplace=True)
+
     df["spx_open"] = spx_data["Open"].astype(np.float64)
     df["spx_high"] = spx_data["High"].astype(np.float64)
     df["spx_low"] = spx_data["Low"].astype(np.float64)
-    df["spx_close"] = spx_data["Close/Last"].astype(np.float64)
+    df["spx_close"] = spx_data["Close"].astype(np.float64)
+    df["spx_volume"] = spx_data["Volume"].astype(np.uint64)
 
 
 def add_vix(df: DataFrame) -> None:
     """Add CBOE Volatility Index to dataframe."""
-    vix_data = read_csv("./data/VIX.csv")[1553:].reset_index()
+    vix_data = read_csv("./data/^VIX.csv")
+    vix_data.rename(
+        columns={"Date": "timestamp"}, inplace=True,
+    )
+    vix_data["timestamp"] = to_datetime(vix_data["timestamp"])
+    vix_data.set_index("timestamp", inplace=True)
+
     df["vix_open"] = vix_data["Open"].astype(np.float64)
     df["vix_high"] = vix_data["High"].astype(np.float64)
     df["vix_low"] = vix_data["Low"].astype(np.float64)
@@ -118,4 +134,4 @@ def normalize_labels(labels: np.ndarray) -> Tuple[np.ndarray, MinMaxScaler]:
 
 
 if __name__ == "__main__":
-    preprocess("./data/MCD.csv")
+    preprocess("data/KO.csv")

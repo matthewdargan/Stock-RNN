@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 from pandas import DataFrame
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense, Dropout, LSTM
+from tensorflow.keras.layers import Dense, Dropout, GRU
 
 from preprocess import preprocess
 
@@ -19,7 +19,7 @@ def plot_predictions(history, predictions):
 BATCH_SIZE = 64
 EPOCHS = 50
 
-stock_data, stock_labels, stock_scaler, label_scaler = preprocess("./data/MCD.csv")
+stock_data, stock_labels, stock_scaler, label_scaler = preprocess("data/KO.csv")
 stock_time_series = stock_data.copy()
 
 # Add dimension for timestep size
@@ -27,13 +27,13 @@ stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.sh
 
 model = Sequential(
     [
-        LSTM(50, return_sequences=True, input_shape=stock_data.shape[1:]),
+        GRU(50, return_sequences=True, input_shape=stock_data.shape[1:]),
         Dropout(0.2),
-        LSTM(50, return_sequences=True),
+        GRU(50, return_sequences=True),
         Dropout(0.2),
-        LSTM(50, return_sequences=True),
+        GRU(50, return_sequences=True),
         Dropout(0.2),
-        LSTM(50),
+        GRU(50),
         Dropout(0.2),
         Dense(1),
     ]
