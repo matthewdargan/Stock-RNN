@@ -39,14 +39,9 @@ def preprocess(
     df.set_index("timestamp", inplace=True)
 
     compute_indicators(df)
-
-    # Add indices to include information of larger market movement
     add_spx(df)
     add_vix(df)
-
     df.dropna(inplace=True)
-
-    # Get labels for each row in the dataframe
     labels = get_labels(df)
 
     # Normalize data points between 0 and 1
