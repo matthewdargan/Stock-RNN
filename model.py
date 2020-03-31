@@ -13,22 +13,34 @@ from tensorflow.keras.layers import (
 from preprocess import preprocess
 
 
-def plot_predictions(actual, predictions):
+def plot_predictions(actual, predictions, save=False, fig_name=None):
     """Plot stock history and predictions to compare results."""
     plt.figure(figsize=(12, 6))
     plt.plot(actual.iloc[:, 0], label="History")
     plt.plot(predictions, label="Prediction")
+    plt.title("Training Predictions")
+    plt.xlabel("Day")
+    plt.ylabel("Price")
     plt.legend(loc="upper left")
     plt.show()
 
+    if save:
+        plt.savefig(f"figures/{fig_name}")
 
-def plot_losses(loss, val_loss):
+
+def plot_losses(loss, val_loss, save=False, fig_name=None):
     """Plot training loss and validation loss."""
     plt.figure(figsize=(12, 6))
     plt.plot(loss, label="loss")
     plt.plot(val_loss, label="val_loss")
+    plt.title("Training Losses")
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE Loss")
     plt.legend()
     plt.show()
+
+    if save:
+        plt.savefig(f"figures/{fig_name}")
 
 
 BATCH_SIZE = 64
@@ -42,12 +54,7 @@ stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.sh
 
 conv_model = Sequential(
     [
-        Conv1D(
-            filters=5,
-            kernel_size=1,
-            activation="relu",
-            input_shape=stock_data.shape[1:],
-        ),
+        Conv1D(5, kernel_size=1, activation="relu", input_shape=stock_data.shape[1:],),
         MaxPool1D(pool_size=1),
         GRU(128, return_sequences=True),
         Dropout(0.2),
