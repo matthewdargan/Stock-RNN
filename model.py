@@ -2,7 +2,13 @@
 import matplotlib.pyplot as plt
 from pandas import DataFrame
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense, Dropout, GRU
+from tensorflow.keras.layers import (
+    Conv1D,
+    Dense,
+    Dropout,
+    GRU,
+    MaxPool1D,
+)
 
 from preprocess import preprocess
 
@@ -28,11 +34,30 @@ def plot_losses(loss, val_loss):
 BATCH_SIZE = 64
 EPOCHS = 50
 
-stock_data, stock_labels, stock_scaler, label_scaler = preprocess("data/GE.csv")
+stock_data, stock_labels, stock_scaler, label_scaler = preprocess("data/KO.csv")
 stock_time_series = stock_data.copy()
 
 # Add dimension for timestep size
 stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.shape[1])
+
+conv_model = Sequential(
+    [
+        Conv1D(
+            filters=5,
+            kernel_size=1,
+            activation="relu",
+            input_shape=stock_data.shape[1:],
+        ),
+        MaxPool1D(pool_size=1),
+        GRU(128, return_sequences=True),
+        Dropout(0.2),
+        GRU(128, return_sequences=True),
+        GRU(128),
+        Dropout(0.2),
+        Dense(28, activation="relu"),
+        Dense(1),
+    ]
+)
 
 model = Sequential(
     [
@@ -53,7 +78,7 @@ if __name__ == "__main__":
         stock_labels,
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
-        validation_split=0.4,
+        validation_split=0.3,
         shuffle=True,
     )
 
