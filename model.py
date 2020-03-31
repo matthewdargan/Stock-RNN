@@ -22,10 +22,11 @@ def plot_predictions(actual, predictions, save=False, fig_name=None):
     plt.xlabel("Day")
     plt.ylabel("Price")
     plt.legend(loc="upper left")
-    plt.show()
 
     if save:
         plt.savefig(f"figures/{fig_name}")
+
+    plt.show()
 
 
 def plot_losses(loss, val_loss, save=False, fig_name=None):
@@ -37,10 +38,11 @@ def plot_losses(loss, val_loss, save=False, fig_name=None):
     plt.xlabel("Epoch")
     plt.ylabel("MSE Loss")
     plt.legend()
-    plt.show()
 
     if save:
         plt.savefig(f"figures/{fig_name}")
+
+    plt.show()
 
 
 BATCH_SIZE = 64
