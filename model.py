@@ -46,7 +46,7 @@ def plot_losses(loss, val_loss, save=False, fig_name=None):
 
 
 BATCH_SIZE = 64
-EPOCHS = 50
+EPOCHS = 100
 
 stock_data, stock_labels, stock_scaler, label_scaler = preprocess("data/KO.csv")
 stock_time_series = stock_data.copy()
@@ -57,7 +57,6 @@ stock_data = stock_data.to_numpy().reshape(stock_data.shape[0], 1, stock_data.sh
 conv_model = Sequential(
     [
         Conv1D(5, kernel_size=1, activation="relu", input_shape=stock_data.shape[1:],),
-        MaxPool1D(pool_size=1),
         GRU(128, return_sequences=True),
         Dropout(0.2),
         GRU(128, return_sequences=True),
@@ -79,20 +78,32 @@ model = Sequential(
         Dense(1),
     ]
 )
-model.compile(loss="mse", optimizer="adamax", metrics=["mae", "mse"])
 
 if __name__ == "__main__":
-    history = model.fit(
-        stock_data,
-        stock_labels,
-        batch_size=BATCH_SIZE,
-        epochs=EPOCHS,
-        validation_split=0.3,
-        shuffle=True,
-    )
+    conv_model.compile(loss="mse", optimizer="adamax", metrics=["mae", "mse"])
+    model.compile(loss="mse", optimizer="adamax", metrics=["mae", "mse"])
 
-    stock_pred = label_scaler.inverse_transform(model.predict(stock_data))
-    stock_time_series = DataFrame(stock_scaler.inverse_transform(stock_time_series))
+    names = {conv_model: "KO_ConvGRU_", model: "KO_GRU_"}
 
-    plot_predictions(stock_time_series, stock_pred)
-    plot_losses(history.history["loss"], history.history["val_loss"])
+    for m in [conv_model, model]:
+        history = m.fit(
+            stock_data,
+            stock_labels,
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_split=0.3,
+            shuffle=True,
+        )
+
+        pred = label_scaler.inverse_transform(m.predict(stock_data))
+        time_series = DataFrame(stock_scaler.inverse_transform(stock_time_series))
+
+        plot_predictions(
+            time_series, pred, save=True, fig_name=f"{names[m]}predictions_1day"
+        )
+        plot_losses(
+            history.history["loss"],
+            history.history["val_loss"],
+            save=True,
+            fig_name=f"{names[m]}losses_1day",
+        )

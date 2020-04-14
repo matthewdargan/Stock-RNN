@@ -42,7 +42,7 @@ def preprocess(
     add_spx(df)
     add_vix(df)
     df.dropna(inplace=True)
-    labels = get_labels(df)
+    labels = get_daily_labels(df)
 
     # Normalize data points between 0 and 1
     df, df_scaler = normalize_dataframe(df)
@@ -110,13 +110,35 @@ def normalize_dataframe(df: DataFrame) -> Tuple[DataFrame, MinMaxScaler]:
     return df, scaler
 
 
-def get_labels(df: DataFrame) -> np.ndarray:
+def get_daily_labels(df: DataFrame) -> np.ndarray:
     """Get labels for a dataframe (closing values from the next day)."""
     closing_values = df["close"].values
     closing_values = np.delete(closing_values, 0)
 
     # Remove last row from original dataframe since we do not have a label for it
     df.drop(df.tail(1).index, inplace=True)
+
+    return closing_values
+
+
+def get_weekly_labels(df: DataFrame) -> np.ndarray:
+    """Get labels for a dataframe (closing values starting one week ahead)."""
+    closing_values = df["close"].values
+    closing_values = np.delete(closing_values, range(8))
+
+    # Remove last row from original dataframe since we do not have a label for it
+    df.drop(df.tail(8).index, inplace=True)
+
+    return closing_values
+
+
+def get_monthly_labels(df: DataFrame) -> np.ndarray:
+    """Get labels for a dataframe (closing values starting one month ahead)."""
+    closing_values = df["close"].values
+    closing_values = np.delete(closing_values, range(31))
+
+    # Remove last row from original dataframe since we do not have a label for it
+    df.drop(df.tail(31).index, inplace=True)
 
     return closing_values
 
